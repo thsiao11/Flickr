@@ -1,0 +1,122 @@
+http://stackoverflow.com/questions/30418028/how-to-change-from-linearlayoutmanager-to-staggeredgridlayoutmanager-in-fragment
+
+public class NewsFragment extends Fragment{
+
+    private int previousTotal = 0;
+    private boolean loading = true;
+    private int visibleThreshold = 5;
+    int firstVisibleItem, visibleItemCount, totalItemCount;
+    int mode=1;
+
+    ImageLoader imageLoader;
+    DisplayImageOptions options;
+    RecyclerAdapter mAdapter;
+    ProgressBar progressBar;
+    View rootView;
+
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setHasOptionsMenu(true);
+        new JSONGetNews().execute();
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    Bundle savedInstanceState) {
+
+        rootView = inflater.inflate(R.layout.fragment_news, container, false);
+        final LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
+        final StaggeredGridLayoutManager gridLayoutManager = new StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL);
+
+        RecyclerView recyclerView = (RecyclerView) rootView.findViewById(R.id.recyclerView);
+        recyclerView.addItemDecoration(new DividerItemDecoration(getActivity(), DividerItemDecoration.VERTICAL_LIST));
+
+        switch (mode) {
+            case 0:
+                recyclerView.setLayoutManager(linearLayoutManager);
+                break;
+            case 1:
+                recyclerView.setLayoutManager(gridLayoutManager);
+                break;
+        }
+
+        mAdapter = new RecyclerAdapter(getActivity(),itemsData);
+        recyclerView.setAdapter(mAdapter);
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+
+        progressBar = (ProgressBar) rootView.findViewById(R.id.progressBar);
+
+        recyclerView.setOnScrollListener(new RecyclerView.OnScrollListener() {
+
+            @Override
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+
+                super.onScrolled(recyclerView, dx, dy);
+                switch (mode){
+                    case 0:
+                        visibleItemCount = linearLayoutManager.getChildCount();
+                        totalItemCount = linearLayoutManager.getItemCount();
+                        firstVisibleItem = linearLayoutManager.findFirstVisibleItemPosition();
+                        break;
+                    case 1:
+                        visibleItemCount = gridLayoutManager.getChildCount();
+                        totalItemCount = gridLayoutManager.getItemCount();
+                        progressBar.setVisibility(View.INVISIBLE);
+                        break;
+                }
+
+                if (loading) {
+                    if (totalItemCount > previousTotal) {
+                        loading = false;
+                        previousTotal = totalItemCount;
+                        progressBar.setVisibility(View.VISIBLE);
+                    }
+                }
+                if (!loading && (totalItemCount - visibleItemCount)
+                <= (firstVisibleItem + visibleThreshold)) {
+
+                    first=first+4;
+                    last=last+4;
+
+                    new JSONGetNews().execute();
+                    progressBar.setVisibility(View.GONE);
+                    loading = true;
+                }
+            }
+        });
+
+        imageLoader = ImageLoader.getInstance();
+        imageLoader.init(ImageLoaderConfiguration.createDefault(getActivity()));
+
+        options = new DisplayImageOptions.Builder()
+        .showStubImage(R.drawable.uranus)
+        .showImageForEmptyUri(R.drawable.earth)
+        .cacheOnDisc()
+        .cacheInMemory()
+        .build();
+
+
+        return rootView;
+    }
+
+
+public boolean onOptionsItemSelected(MenuItem item) {
+    if(item.getItemId() == R.id.grid_view) {
+        if (mRecyclerView.getLayoutManager() == mGridLayoutManger) return true; // nothing to do
+        mRecyclerView.setAdapter(null); // clear recycler view before tampering with its layout manager
+        mRecyclerView.setLayoutManager(mGridLayoutManager); // set appropriate layout manager
+        mRecyclerView.setAdapter(mAdapter); // reattach adapter
+        return true;
+    }
+
+    if(item.getItemId() == R.id.linear_view) {
+        // ditto with mLinearLayoutManager
+        return true;
+    }
+
+    return super.onOptionsItemSelected(item);
+}
+
+}
+
+
